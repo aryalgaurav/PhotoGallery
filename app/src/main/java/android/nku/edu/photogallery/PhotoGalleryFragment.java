@@ -14,7 +14,6 @@ import android.view.ViewTreeObserver;
 import android.widget.TextView;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -25,7 +24,7 @@ public class PhotoGalleryFragment extends Fragment {
     private int lastFetchedPage = 1;
 
     private RecyclerView mPhotoRecyclerView;
-    private List<GalleryItem> mItems = new ArrayList<>();
+    private ArrayList<GalleryItem> mItems = new ArrayList<>();
 
     public static PhotoGalleryFragment newInstance() {
         return new PhotoGalleryFragment();
@@ -115,7 +114,7 @@ public class PhotoGalleryFragment extends Fragment {
             return lastBoundPosition;
         }
 
-        public PhotoAdapter(List<GalleryItem> galleryItems) {
+        public PhotoAdapter(ArrayList<GalleryItem> galleryItems) {
             mGalleryItems = galleryItems;
         }
 
@@ -138,15 +137,15 @@ public class PhotoGalleryFragment extends Fragment {
         }
     }
 
-    private class FetchItemsTask extends AsyncTask<Integer, Void, List<GalleryItem>> {
+    private class FetchItemsTask extends AsyncTask<Integer, Void, ArrayList<GalleryItem>> {
 
         @Override
-        protected List<GalleryItem> doInBackground(Integer... params) {
+        protected ArrayList<GalleryItem> doInBackground(Integer... params) {
             return new FlickrFetchr().fetchItems(lastFetchedPage);
         }
 
         @Override
-        protected void onPostExecute(List<GalleryItem> galleryItems) {
+        protected void onPostExecute(ArrayList<GalleryItem> galleryItems) {
 
             if(lastFetchedPage > 1) {
                 mItems.addAll(galleryItems);
