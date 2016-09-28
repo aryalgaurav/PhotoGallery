@@ -1,5 +1,6 @@
 package android.nku.edu.photogallery;
 
+import android.graphics.Point;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -9,9 +10,11 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -19,6 +22,7 @@ import java.util.List;
  */
 public class PhotoGalleryFragment extends Fragment {
     private static final String TAG = "PhotoGalleryFragment";
+    private int lastFetchedPage = 1;
 
     private RecyclerView mPhotoRecyclerView;
     private List<GalleryItem> mItems = new ArrayList<>();
@@ -39,10 +43,46 @@ public class PhotoGalleryFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_photo_gallery, container, false);
         mPhotoRecyclerView = (RecyclerView) view.findViewById(R.id.fragment_beat_box_recycler_view);
-        mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
+
+        final int STANDARD_NUMBER_OF_COLUMNS = 3;
+        mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), STANDARD_NUMBER_OF_COLUMNS));
+
+        mPhotoRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                PhotoAdapter adapter = (PhotoAdapter) recyclerView.getAdapter(); // must be cast to Photoadapter, as I use a non-inherited method
+                int lastPosition = adapter.getLastBoundPosition();
+                GridLayoutManager layoutManager = (GridLayoutManager) recyclerView.getLayoutManager();
+                int loadBufferPosition = 1;
+
+                if (lastPosition >= adapter.getItemCount() - layoutManager.getSpanCount() - loadBufferPosition) {
+                    new FetchItemsTask().execute(lastPosition + 1);
+                }
+            }
+
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+            }
+        });
+
+
+
+        mPhotoRecyclerView.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                Point size = new Point();
+                getActivity().getWindowManager().getDefaultDisplay().getSize(size);
+                int newColumns = (int) Math.floor(size.x * 3 / 1440);
+                if (newColumns != STANDARD_NUMBER_OF_COLUMNS) {
+                    GridLayoutManager layoutManager = (GridLayoutManager) mPhotoRecyclerView.getLayoutManager();
+                    layoutManager.setSpanCount(newColumns);
+                }
+            }
+        });
 
         setupAdapter();
-
         return view;
     }
 
@@ -69,6 +109,11 @@ public class PhotoGalleryFragment extends Fragment {
     private class PhotoAdapter extends RecyclerView.Adapter<PhotoHolder> {
 
         private List<GalleryItem> mGalleryItems;
+        private int lastBoundPosition;
+
+        public int getLastBoundPosition() {
+            return lastBoundPosition;
+        }
 
         public PhotoAdapter(List<GalleryItem> galleryItems) {
             mGalleryItems = galleryItems;
@@ -84,6 +129,7 @@ public class PhotoGalleryFragment extends Fragment {
         public void onBindViewHolder(PhotoHolder photoHolder, int position) {
             GalleryItem galleryItem = mGalleryItems.get(position);
             photoHolder.bindGalleryItem(galleryItem);
+            lastBoundPosition = position;
         }
 
         @Override
@@ -92,17 +138,25 @@ public class PhotoGalleryFragment extends Fragment {
         }
     }
 
-    private class FetchItemsTask extends AsyncTask<Void, Void, List<GalleryItem>> {
+    private class FetchItemsTask extends AsyncTask<Integer, Void, List<GalleryItem>> {
 
         @Override
-        protected List<GalleryItem> doInBackground(Void... params) {
-            return new FlickrFetchr().fetchItems();
+        protected List<GalleryItem> doInBackground(Integer... params) {
+            return new FlickrFetchr().fetchItems(lastFetchedPage);
         }
 
         @Override
         protected void onPostExecute(List<GalleryItem> galleryItems) {
-            mItems = galleryItems;
-            setupAdapter();
+
+            if(lastFetchedPage > 1) {
+                mItems.addAll(galleryItems);
+                mPhotoRecyclerView.getAdapter().notifyDataSetChanged();
+            }
+            else {
+                mItems = galleryItems;
+                setupAdapter();
+            }
+            lastFetchedPage++;
         }
     }
 }

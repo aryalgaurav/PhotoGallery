@@ -1,12 +1,19 @@
 package android.nku.edu.photogallery;
 
+import com.google.gson.annotations.SerializedName;
+
 /**
  * Created by Gaurav on 9/27/2016.
  */
 public class GalleryItem {
 
+    @SerializedName("title")
     private String mCaption;
+
+    @SerializedName("id")
     private String mId;
+
+    @SerializedName("url_s")
     private String mUrl;
 
     public String getCaption() {
